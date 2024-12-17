@@ -48,6 +48,9 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             border-radius: 5px;
             margin-right: 10px;
         }
+        ul li.sale {
+            background-color: #fee;
+        }
         a, a:visited, a:active, a:hover {
             color:#000;
         }
@@ -163,7 +166,9 @@ else:
 
 output = ""
 
-for product, variants in product_variants.items():
+
+for product in sorted(product_variants):
+    variants = product_variants[product]
     details = get_product_by_handle(product)
     ptitle = details["title"].replace("(In Stock) ", "")
     qprint(f"\nProcessing: {ptitle}")
@@ -182,12 +187,12 @@ for product, variants in product_variants.items():
 
         novelties = [variant for variant in variants if "Novelties" in variant[0] and variant[1]]
         if novelties:
-            novelties_text = f"<li>✨ (Some) Novelties in stock!</li>"
+            novelties_text = f"<li>✨ Novelties in stock!</li>"
             qprint("Has Novelties")
 
         international = [variant for variant in variants if variant[0] in INT_KITS and variant[1]]
         if international:
-            int_text = f"<li>🌎 (Some) International kits in stock!</li>"
+            int_text = f"<li>🌎 International kit in stock!</li>"
             qprint("Has International Kits")
 
         iso_kits = [variant[1] for variant in variants if variant[0].startswith("ISO")]
@@ -205,7 +210,17 @@ for product, variants in product_variants.items():
             vimage = details["images"][0]["src"]
 
         vprice = float(vdetails["price"]) * 1.2
-        status = f"<ul><li>💰 £{vprice:.0f}</li>{novelties_text}{int_text}{iso_text}</ul>"
+
+        try:
+            vwasprice = float(vdetails["compare_at_price"]) * 1.2
+        except TypeError:
+            vwasprice = 0
+
+        if vwasprice and vwasprice != vprice:
+            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} (🥳 was: £{vwasprice:.0f})</li>{novelties_text}{int_text}{iso_text}</ul>"
+        else:
+            status = f"<ul><li>💰 £{vprice:.0f}</li>{novelties_text}{int_text}{iso_text}</ul>"
+
 
         output += f"""<section><h2><a href="{HTML_URL}{product}{TRACKING}">
     {ptitle} - {vtitle}</a></h2>
