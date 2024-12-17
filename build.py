@@ -17,6 +17,10 @@ OUTPUT_FILE = "index.html"
 
 CACHE_DIR = pathlib.Path("cache")
 
+FAVS = [l.strip() for l in open("favourites.txt", "r").readlines()]
+
+print(FAVS)
+
 PRODUCT_PROCESS_CACHE = CACHE_DIR / "proc.json"
 
 CACHE_DIR.mkdir(exist_ok=True)
@@ -32,11 +36,22 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         <h2>A list of in-stock base kits at protoTypist</h2>
         <p>This site is not affiliated with protoTypist in any way, accuracy of kits/prices not guaranteed. No commission is earned. It's just a bit o' fun!</p>
         <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin. But if you find this useful, please <a href="https://ko-fi.com/gadgetoid">buy me a coffee!</a></p>
-        <p><strong>Filters:</strong> <a href="#" id="filter_all">Show All</a> | <a href="#" id="filter_sub100">Under £100</a> | <a href="#" id="filter_sale">On Sale</a>  | <a href="#" id="filter_novelties">With Novelties</a> | <a href="#" id="filter_international">With International</a></p>
+        <ul>
+            <li class="title">Filters:</li>
+            <li class="filter selected" id="filter_all">⚡ Show All</li>
+            <li class="filter" id="filter_sub100">💰 Under £100</li>
+            <li class="filter" id="filter_sale">🥳 On Sale</li>
+            <li class="filter" id="filter_favourite">💖 My Picks</li>
+            <li class="filter" id="filter_novelties">✨ With Novelties</li>
+            <li class="filter" id="filter_international">🌎 With International</li>
+        </ul>
     </header>
     <article>
         <output>
     </article>
+    <footer>
+        Nothing to see here! <a href="#">☝️ back tae top wi' ya!</a>
+    </footer>
     <style type="text/css">
         body {
             background:#eee;
@@ -45,17 +60,28 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         ul li {
             display: inline-block;
             padding: 5px 15px;
-            background-color: #eee;
+            background-color: #fff;
             border-radius: 5px;
             margin-right: 10px;
+        }
+        ul li.title {
+            background: transparent;
+            padding: 5px 0;
+        }
+        article ul li {
+            background-color: #eee;
         }
         ul li.sale {
             background-color: #fee;
         }
+        .filter {
+            cursor:pointer;cursor:hand;
+        }
+        .filter:hover, .filter.selected {background-color: #efe}
         a, a:visited, a:active, a:hover {
             color:#000;
         }
-        h2 a {
+        h2 a, ul li a {
             text-decoration:none;
         }
         h2, ul {
@@ -66,13 +92,15 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         img {
             margin-top:15px;
+            width: 100%;
+            max-width: 100%;
         }
         article section {
             padding: 20px;
             margin: 20px;
             background: #fff;
         }
-        header {
+        header, footer {
             padding: 20px;
             margin: 20px;
         }
@@ -90,40 +118,52 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         'use strict';
         (function() {
             var sets = document.getElementsByTagName("section");
+            var filters = document.getElementsByClassName("filter");
             console.log(sets);
 
             document.getElementById("filter_all").onclick = function(){
+                for (var f = 0; f < filters.length; f++) {
+                    filters[f].classList.toggle("selected", false);
+                }
+                document.getElementById("filter_all").classList.toggle("selected", true);
                 for (var j = 0; j < sets.length; j++) {
                     sets[j].classList.toggle("hidden", false);
                 }
                 return false;
             };
 
-            document.getElementById("filter_sub100").onclick = function(){
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_sub100"));
+            function filter_by(filter) {
+                for (var f = 0; f < filters.length; f++) {
+                    filters[f].classList.toggle("selected", false);
                 }
+                document.getElementById("filter" + filter).classList.toggle("selected", true);
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", !sets[j].classList.contains(filter));
+                }
+            }
+
+            document.getElementById("filter_sub100").onclick = function(){
+                filter_by("_sub100");
                 return false;
             };
 
             document.getElementById("filter_novelties").onclick = function(){
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_novelties"));
-                }
+                filter_by("_novelties");
                 return false;
             };
 
             document.getElementById("filter_international").onclick = function(){
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_international"));
-                }
+                filter_by("_international");
                 return false;
             };
 
             document.getElementById("filter_sale").onclick = function(){
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_sale"));
-                }
+                filter_by("_sale");
+                return false;
+            };
+
+            document.getElementById("filter_favourite").onclick = function(){
+                filter_by("_favourite");
                 return false;
             };
         })();
@@ -258,16 +298,23 @@ for product in sorted(product_variants):
 
         vprice = float(vdetails["price"]) * 1.2
 
+
+        if product in FAVS or f"{product}/{vtitle}" in FAVS:
+            css_classes.append("_favourite")
+            fav_text = "<li>💖</li>"
+        else:
+            fav_text = ""
+
         try:
             vwasprice = float(vdetails["compare_at_price"]) * 1.2
         except TypeError:
             vwasprice = 0
 
         if vwasprice and vwasprice != vprice:
-            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} (🥳 was: £{vwasprice:.0f})</li>{novelties_text}{int_text}{iso_text}</ul>"
+            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} (🥳 was: £{vwasprice:.0f})</li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
             css_classes.append("_sale")
         else:
-            status = f"<ul><li>💰 £{vprice:.0f}</li>{novelties_text}{int_text}{iso_text}</ul>"
+            status = f"<ul><li>💰 £{vprice:.0f}</li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
 
 
         if vprice < 100:
@@ -285,7 +332,7 @@ for product in sorted(product_variants):
     {ptitle} - {vtitle}</a></h2>
 {status}
 <a href="{HTML_URL}{product}{TRACKING}">
-    <img src="{vimage}" alt="{ptitle} - {vtitle}" style="max-width: 100%;">
+    <img src="{vimage}" alt="{ptitle} - {vtitle}">
 </a></section>
 """
 
