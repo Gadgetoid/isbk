@@ -32,6 +32,7 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         <h2>A list of in-stock base kits at protoTypist</h2>
         <p>This site is not affiliated with protoTypist in any way, accuracy of kits/prices not guaranteed. No commission is earned. It's just a bit o' fun!</p>
         <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin. But if you find this useful, please <a href="https://ko-fi.com/gadgetoid">buy me a coffee!</a></p>
+        <p><strong>Filters:</strong> <a href="#" id="filter_all">Show All</a> | <a href="#" id="filter_sub100">Under £100</a> | <a href="#" id="filter_sale">On Sale</a>  | <a href="#" id="filter_novelties">With Novelties</a> | <a href="#" id="filter_international">With International</a></p>
     </header>
     <article>
         <output>
@@ -75,6 +76,9 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             padding: 20px;
             margin: 20px;
         }
+        .hidden {
+            display: none;
+        }
         @media only screen and (min-width: 1200px) {
             body {
                 max-width: 70%;
@@ -82,6 +86,48 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             }
         }
     </style>
+    <script type="text/javascript">
+        'use strict';
+        (function() {
+            var sets = document.getElementsByTagName("section");
+            console.log(sets);
+
+            document.getElementById("filter_all").onclick = function(){
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", false);
+                }
+                return false;
+            };
+
+            document.getElementById("filter_sub100").onclick = function(){
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_sub100"));
+                }
+                return false;
+            };
+
+            document.getElementById("filter_novelties").onclick = function(){
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_novelties"));
+                }
+                return false;
+            };
+
+            document.getElementById("filter_international").onclick = function(){
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_international"));
+                }
+                return false;
+            };
+
+            document.getElementById("filter_sale").onclick = function(){
+                for (var j = 0; j < sets.length; j++) {
+                    sets[j].classList.toggle("hidden", !sets[j].classList.contains("_sale"));
+                }
+                return false;
+            };
+        })();
+    </script>
 </body>
 </html>"""
 
@@ -200,6 +246,7 @@ for product in sorted(product_variants):
             iso_text = "<li>🇬🇧 Some ISO kits in stock</li>" if True in iso_kits else "<li>⚠️ No ISO kits!</li>"
 
     for variant in base_kits:
+        css_classes = []
         vtitle, vstock = variant
         vdetails = [p for p in details["variants"] if p["title"] == vtitle or p["title"].startswith(vtitle)][0]
         vtitle = vdetails["title"]
@@ -218,11 +265,23 @@ for product in sorted(product_variants):
 
         if vwasprice and vwasprice != vprice:
             status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} (🥳 was: £{vwasprice:.0f})</li>{novelties_text}{int_text}{iso_text}</ul>"
+            css_classes.append("_sale")
         else:
             status = f"<ul><li>💰 £{vprice:.0f}</li>{novelties_text}{int_text}{iso_text}</ul>"
 
 
-        output += f"""<section><h2><a href="{HTML_URL}{product}{TRACKING}">
+        if vprice < 100:
+            css_classes.append("_sub100")
+
+        if novelties_text or "Novelties" in vtitle:
+            css_classes.append("_novelties")
+
+        if int_text or "International" in vtitle:
+            css_classes.append("_international")
+
+        css_classes = " ".join(css_classes)
+
+        output += f"""<section class="{css_classes}"><h2><a href="{HTML_URL}{product}{TRACKING}">
     {ptitle} - {vtitle}</a></h2>
 {status}
 <a href="{HTML_URL}{product}{TRACKING}">
