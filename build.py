@@ -2,6 +2,7 @@ import requests
 import pathlib
 import json
 import time
+import sys
 from bs4 import BeautifulSoup
 
 
@@ -76,6 +77,10 @@ PRODUCT_PROCESS_CACHE = CACHE_DIR / "proc.json"
 
 CACHE_DIR.mkdir(exist_ok=True)
 
+def qprint(*args, **kwargs):
+    print(*args, **kwargs)
+    sys.stdout.flush()
+
 
 for i in range(1, 10):
     cache = CACHE_DIR / f"cache{i}.json"
@@ -87,11 +92,11 @@ for i in range(1, 10):
         open(cache, "w").write(json.dumps(j))
 
     num_products = len(j["products"])
-    print("Fetching {num_products} products...")
+    qprint(f"Fetching {num_products} products...")
 
     for product in j["products"]:
         url = HTML_URL + product["handle"]
-        print(url)
+        qprint(url)
         cache = (CACHE_DIR / product["handle"]).with_suffix(".html")
         if cache.exists():
             html = open(cache, "r").read()
@@ -125,7 +130,7 @@ else:
     for file in html_files:
         f = pathlib.Path(file)
         product_slug = f.stem
-        print(f"Parsing {file}")
+        qprint(f"Parsing {file}")
         soup = BeautifulSoup(open(file, "r").read())
         product_variants[product_slug] = []
 
@@ -140,7 +145,7 @@ else:
                 product_variants[product_slug].append((vtitle, vin_stock))
         else:
             # Probably just a single product
-            print("SINGLE PRODUCT!!!")
+            qprint("SINGLE PRODUCT!!!")
             product_variants[product_slug] = True
 
     open(PRODUCT_PROCESS_CACHE, "w").write(json.dumps(product_variants))
@@ -149,7 +154,8 @@ output = ""
 
 for product, variants in product_variants.items():
     details = get_product_by_handle(product)
-    ptitle = details["title"]
+    ptitle = details["title"].replace("(In Stock) ", "")
+    qprint(f"\nProcessing: {ptitle}")
     novelties_text = ""
     int_text = ""
     iso_text = ""
@@ -160,15 +166,18 @@ for product, variants in product_variants.items():
     else:
         base_kits = [variant for variant in variants if variant[1] and "Base" in variant[0]]
         if not base_kits:
+            qprint("No base kits... skipping!")
             continue
 
         novelties = [variant for variant in variants if "Novelties" in variant[0] and variant[1]]
         if novelties:
             novelties_text = f"<li>✨ (Some) Novelties in stock!</li>"
+            qprint("Has Novelties")
 
         international = [variant for variant in variants if variant[0] in INT_KITS and variant[1]]
         if international:
             int_text = f"<li>🌎 (Some) International kits in stock!</li>"
+            qprint("Has International Kits")
 
         iso_kits = [variant[1] for variant in variants if variant[0].startswith("ISO")]
         if iso_kits:
@@ -178,6 +187,7 @@ for product, variants in product_variants.items():
         vtitle, vstock = variant
         vdetails = [p for p in details["variants"] if p["title"] == vtitle or p["title"].startswith(vtitle)][0]
         vtitle = vdetails["title"]
+        qprint(f"In stock: {vtitle}")
         try:
             vimage = vdetails["featured_image"]["src"]
         except TypeError:
@@ -185,8 +195,6 @@ for product, variants in product_variants.items():
 
         vprice = float(vdetails["price"]) * 1.2
         status = f"<ul><li>💰 £{vprice:.0f}</li>{novelties_text}{int_text}{iso_text}</ul>"
-
-        ptitle = ptitle.replace("(In Stock) ", "")
 
         output += f"""<section><h2><a href="{HTML_URL}{product}{TRACKING}">
     {ptitle} - {vtitle}</a></h2>
