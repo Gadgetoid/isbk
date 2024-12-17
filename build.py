@@ -9,8 +9,17 @@ from bs4 import BeautifulSoup
 HTML_URL = "https://prototypist.net/products/"
 JSON_URL = "https://prototypist.net/collections/in-stock-keycap-sets/products.json?page="
 TRACKING = "?utm_source=instockbasekits&utm_medium=website&utm_campaign=instockwalletkiller"
+FETCH_DELAY = 0.5
+
+INT_KITS = ("International")
 
 OUTPUT_FILE = "index.html"
+
+CACHE_DIR = pathlib.Path("cache")
+
+PRODUCT_PROCESS_CACHE = CACHE_DIR / "proc.json"
+
+CACHE_DIR.mkdir(exist_ok=True)
 
 TEMPLATE = """<!DOCTYPE html><html lang="en">
 <head>
@@ -22,7 +31,7 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         <h1>The Wallet Killer</h1>
         <h2>A list of in-stock base kits at protoTypist</h2>
         <p>This site is not affiliated with protoTypist in any way, accuracy of kits/prices not guaranteed. No commission is earned. It's just a bit o' fun!</p>
-        <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin.</p>
+        <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin. But if you find this useful, please <a href="https://ko-fi.com/gadgetoid">buy me a coffee!</a></p>
     </header>
     <article>
         <output>
@@ -41,6 +50,8 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         a, a:visited, a:active, a:hover {
             color:#000;
+        }
+        h2 a {
             text-decoration:none;
         }
         h2, ul {
@@ -63,7 +74,7 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         @media only screen and (min-width: 1200px) {
             body {
-                max-width: 50%;
+                max-width: 70%;
                 margin: 0 auto;
             }
         }
@@ -71,15 +82,13 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
 </body>
 </html>"""
 
-CACHE_DIR = pathlib.Path("cache")
-
-PRODUCT_PROCESS_CACHE = CACHE_DIR / "proc.json"
-
-CACHE_DIR.mkdir(exist_ok=True)
 
 def qprint(*args, **kwargs):
     print(*args, **kwargs)
     sys.stdout.flush()
+
+
+qprint("\nFetching product data and HTML...")
 
 
 for i in range(1, 10):
@@ -103,9 +112,9 @@ for i in range(1, 10):
         else:
             r = requests.get(url=url)
             open(cache, "w").write(r.text)
-            time.sleep(1.0)
+            time.sleep(FETCH_DELAY)
 
-INT_KITS = ("International")
+qprint("\nLoading product data...")
 
 # Load product data from cache
 products = []
@@ -122,6 +131,8 @@ def get_product_by_handle(handle):
 # Load HTML files from cache
 html_files = CACHE_DIR.glob("*.html")
 product_variants = {}
+
+qprint("\nProcessing downloaded html files...")
 
 if pathlib.Path(PRODUCT_PROCESS_CACHE).exists():
     product_variants = json.loads(open(PRODUCT_PROCESS_CACHE, "r").read())
