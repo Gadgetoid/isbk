@@ -55,14 +55,23 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
     <style type="text/css">
         body {
             background:#eee;
-            font-family: Sans-serif;
+            font-family: Verdana, Sans-serif;
+            line-height: 1.2em;
+        }
+        h1, h2, h3, h4 {
+            font-family: Georgia, Serif;
+        }
+        h1 {
+            margin-bottom:0.2em;
         }
         ul li {
             display: inline-block;
             padding: 5px 15px;
             background-color: #fff;
-            border-radius: 5px;
+            border-radius: 5px 0 5px 0;
             margin-right: 10px;
+            font-size: initial;
+            line-height: 1.6em;
         }
         ul li.title {
             background: transparent;
@@ -76,29 +85,51 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         .filter {
             cursor:pointer;cursor:hand;
+            margin-bottom: 10px;
         }
         .filter:hover, .filter.selected {background-color: #efe}
         a, a:visited, a:active, a:hover {
             color:#000;
         }
-        h2 a, ul li a {
+        h2 a {
             text-decoration:none;
+            font-weight:normal;
+            font-size:1.2em;
+            line-height:1.2em;
+        }
+        header h2 {
+            color: #448;
+            font-weight:normal;
+        }
+        h2 span {
+            color: #448;
+            font-size: 0.8em;
+        }
+        ul {
+            font-size: 0;
+            list-style: none;
+        }
+        article ul {
+            margin-top: 20px;
         }
         h2, ul {
             margin: 0;
             padding: 0;
-            margin-bottom:5px;
-            list-style: none;
+            margin:10px 0;
         }
         img {
             margin-top:15px;
             width: 100%;
             max-width: 100%;
+            border-radius: 0 0 0 20px;
+            display: block;
+            box-shadow: 0px 0px 3px #ddd;
         }
         article section {
             padding: 20px;
             margin: 20px;
             background: #fff;
+            border-radius: 0 30px 0 30px;
         }
         header, footer {
             padding: 20px;
@@ -298,7 +329,6 @@ for product in sorted(product_variants):
 
         vprice = float(vdetails["price"]) * 1.2
 
-
         if product in FAVS or f"{product}/{vtitle}" in FAVS:
             css_classes.append("_favourite")
             fav_text = "<li>💖</li>"
@@ -329,7 +359,7 @@ for product in sorted(product_variants):
         css_classes = " ".join(css_classes)
 
         output += f"""<section class="{css_classes}"><h2><a href="{HTML_URL}{product}{TRACKING}">
-    {ptitle} - {vtitle}</a></h2>
+    {ptitle}<span> - {vtitle}</span></a></h2>
 {status}
 <a href="{HTML_URL}{product}{TRACKING}">
     <img src="{vimage}" alt="{ptitle} - {vtitle}">
