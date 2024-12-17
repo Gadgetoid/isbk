@@ -50,7 +50,8 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         <output>
     </article>
     <footer>
-        Nothing to see here! <a href="#">☝️ back tae top wi' ya!</a>
+        <p>Nothing to see here! <a href="#">☝️ back tae top wi' ya!</a></p>
+        <p>Or... 🥹 ... stay for a <a href="https://ko-fi.com/gadgetoid">coffee?</a></p>
     </footer>
     <style type="text/css">
         body {
@@ -297,7 +298,12 @@ for product in sorted(product_variants):
         base_kits = [(details["variants"][0]["title"], True)]
 
     else:
-        base_kits = [variant for variant in variants if variant[1] and "Base" in variant[0]]
+        # TODO: Bit of a hack for CXA Iara, CXA Sugarplum, Tyche One, etc which have *one* variant that is effectively the base kit
+        if len(variants) == 1 and variants[0][1] and "Add-on" not in variants[0][0]:
+            base_kits = variants
+        else:
+            # TODO: The "Blank Kit" here is a hack for MDA Future Suzuri
+            base_kits = [variant for variant in variants if variant[1] and "Base" in variant[0] or "Blank Kit" in variant[0]]
         if not base_kits:
             qprint("No base kits... skipping!")
             continue
@@ -362,7 +368,7 @@ for product in sorted(product_variants):
     {ptitle}<span> - {vtitle}</span></a></h2>
 {status}
 <a href="{HTML_URL}{product}{TRACKING}">
-    <img src="{vimage}" alt="{ptitle} - {vtitle}">
+    <img src="{vimage}" alt="{ptitle} - {vtitle}" loading="lazy">
 </a></section>
 """
 
