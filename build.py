@@ -73,7 +73,7 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             padding: 5px 15px;
             background-color: #fff;
             border-radius: 5px 0 5px 0;
-            margin-right: 10px;
+            margin: 0 10px 10px 0;
             font-size: initial;
             line-height: 1.6em;
         }
@@ -89,7 +89,6 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         .filter {
             cursor:pointer;cursor:hand;
-            margin-bottom: 10px;
         }
         .filter:hover, .filter.selected {background-color: #efe}
         a, a:visited, a:active, a:hover {
@@ -146,6 +145,36 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             body {
                 max-width: 70%;
                 margin: 0 auto;
+            }
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #000;
+                color: #ccc;
+            }
+            h1 {
+                color: #eee;
+            }
+            header h2, h2 span {
+                color: #aae;
+            }
+            a, a:visited, a:active, a:hover {
+                color:#fff;
+            }
+            ul li, section ul li {
+                background-color: #333;
+            }
+            article section {
+                background-color: #111;
+            }
+            .filter:hover, .filter.selected {
+                background-color: #343;
+            }
+            ul li.sale {
+                background-color: #433;
+            }
+            img {
+                box-shadow: 0px 0px 3px #666;
             }
         }
     </style>
@@ -350,7 +379,7 @@ for product in sorted(product_variants):
             vwasprice = 0
 
         if vwasprice and vwasprice != vprice:
-            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} (🥳 was: £{vwasprice:.0f})</li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
+            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} <small>(🥳 was: £{vwasprice:.0f})</small></li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
             css_classes.append("_sale")
         else:
             status = f"<ul><li>💰 £{vprice:.0f}</li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
