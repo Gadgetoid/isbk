@@ -28,7 +28,8 @@ CACHE_DIR.mkdir(exist_ok=True)
 TEMPLATE = """<!DOCTYPE html><html lang="en">
 <head>
     <title>Wallet Killer - A list of in-stock base kits on protoTypist.net</title>
-    <meta charset="UTF-8">
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
 </head>
 <body>
     <header>
@@ -58,6 +59,8 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             background:#eee;
             font-family: Verdana, Sans-serif;
             line-height: 1.2em;
+            margin: 0;
+            padding: 2px;
         }
         h1, h2, h3, h4 {
             font-family: Georgia, Serif;
@@ -128,13 +131,13 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         }
         article section {
             padding: 20px;
-            margin: 20px;
+            margin: 20px 0;
             background: #fff;
             border-radius: 0 30px 0 30px;
         }
         header, footer {
             padding: 20px;
-            margin: 20px;
+            margin: 20px 0;
         }
         .hidden {
             display: none;
