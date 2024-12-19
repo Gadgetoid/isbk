@@ -4,6 +4,8 @@ import json
 import time
 import sys
 from bs4 import BeautifulSoup
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 HTML_URL = "https://prototypist.net/products/"
@@ -25,6 +27,8 @@ PRODUCT_PROCESS_CACHE = CACHE_DIR / "proc.json"
 
 CACHE_DIR.mkdir(exist_ok=True)
 
+DATE = datetime.now(tz=ZoneInfo("Europe/London"))
+
 TEMPLATE = """<!DOCTYPE html><html lang="en">
 <head>
     <title>Wallet Killer - A list of in-stock base kits on protoTypist.net</title>
@@ -37,14 +41,18 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         <h2>A list of in-stock base kits at protoTypist</h2>
         <p>This site is not affiliated with protoTypist in any way, accuracy of kits/prices not guaranteed. No commission is earned. It's just a bit o' fun!</p>
         <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin. But if you find this useful, please <a href="https://ko-fi.com/gadgetoid">buy me a coffee!</a></p>
-        <ul>
+        <ul id="filters">
             <li class="title">Filters:</li>
-            <li class="filter selected" id="filter_all">⚡ Show All</li>
-            <li class="filter" id="filter_sub100">💰 Under £100</li>
-            <li class="filter" id="filter_sale">🥳 On Sale</li>
-            <li class="filter" id="filter_favourite">💖 My Picks</li>
-            <li class="filter" id="filter_novelties">✨ With Novelties</li>
-            <li class="filter" id="filter_international">🌎 With International</li>
+            <li class="filter selected" data-filter="_all">⚡ All</li>
+            <li class="filter" data-filter="_sub100">💰 &lt;£100</li>
+            <li class="filter" data-filter="_sale">🥳 Sale</li>
+            <li class="filter" data-filter="_new">⏰ New</li>
+            <li class="filter" data-filter="_favourite">💖 Favs</li>
+            <li class="filter" data-filter="_novelties">✨ Novelties</li>
+            <li class="filter" data-filter="_international">🌎 International</li>
+        <ul id="profiles">
+            <li class="title">Profiles:</li>
+            <profiles>
         </ul>
     </header>
     <article>
@@ -77,6 +85,9 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             font-size: initial;
             line-height: 1.6em;
         }
+        #profiles .filter {
+            background-color: #f8f8f8;
+        }
         ul li.title {
             background: transparent;
             padding: 5px 0;
@@ -90,7 +101,8 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         .filter {
             cursor:pointer;cursor:hand;
         }
-        .filter:hover, .filter.selected {background-color: #efe}
+        .filter:hover, .filter.selected, 
+        #profiles .filter.selected {background-color: #efe}
         a, a:visited, a:active, a:hover {
             color:#000;
         }
@@ -164,10 +176,14 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
             ul li, section ul li {
                 background-color: #333;
             }
+            #profiles .filter {
+                background-color: #222;
+            }
             article section {
                 background-color: #111;
             }
-            .filter:hover, .filter.selected {
+            .filter:hover, .filter.selected, 
+            #profiles .filter.selected {
                 background-color: #343;
             }
             ul li.sale {
@@ -183,53 +199,27 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
         (function() {
             var sets = document.getElementsByTagName("section");
             var filters = document.getElementsByClassName("filter");
-            console.log(sets);
-
-            document.getElementById("filter_all").onclick = function(){
+            function filter(event) {
+                var filter = this.dataset.filter;
                 for (var f = 0; f < filters.length; f++) {
                     filters[f].classList.toggle("selected", false);
                 }
-                document.getElementById("filter_all").classList.toggle("selected", true);
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", false);
+                this.classList.toggle("selected", true);
+    
+                if (filter == "_all") {
+                    for (var j = 0; j < sets.length; j++) {
+                        sets[j].classList.toggle("hidden", false);
+                    }
+                } else {
+                    for (var j = 0; j < sets.length; j++) {
+                        sets[j].classList.toggle("hidden", !sets[j].classList.contains(filter));
+                    }
                 }
                 return false;
-            };
-
-            function filter_by(filter) {
-                for (var f = 0; f < filters.length; f++) {
-                    filters[f].classList.toggle("selected", false);
-                }
-                document.getElementById("filter" + filter).classList.toggle("selected", true);
-                for (var j = 0; j < sets.length; j++) {
-                    sets[j].classList.toggle("hidden", !sets[j].classList.contains(filter));
-                }
             }
-
-            document.getElementById("filter_sub100").onclick = function(){
-                filter_by("_sub100");
-                return false;
-            };
-
-            document.getElementById("filter_novelties").onclick = function(){
-                filter_by("_novelties");
-                return false;
-            };
-
-            document.getElementById("filter_international").onclick = function(){
-                filter_by("_international");
-                return false;
-            };
-
-            document.getElementById("filter_sale").onclick = function(){
-                filter_by("_sale");
-                return false;
-            };
-
-            document.getElementById("filter_favourite").onclick = function(){
-                filter_by("_favourite");
-                return false;
-            };
+            Array.prototype.forEach.call(filters, (item) => {
+                item.addEventListener("click", filter);
+            });
         })();
     </script>
 </body>
@@ -301,7 +291,7 @@ else:
         if soup.find("div", attrs={"class": "variant-picker__option-values"}):
             # Product has variants
             variants = soup.find("div", attrs={"class": "variant-picker__option-values"}).find_all("input", attrs={"class": "sr-only", "type": "radio"})
-            
+
             for variant in variants:
                 in_stock_label = variant.find_next("label", attrs={"for": variant.get("id")})
                 vtitle = in_stock_label.find_next("span", class_=lambda cls: cls is None or "block-swatch__color" not in cls).contents[0]
@@ -315,7 +305,7 @@ else:
     open(PRODUCT_PROCESS_CACHE, "w").write(json.dumps(product_variants))
 
 output = ""
-
+profiles = {}
 
 for product in sorted(product_variants):
     variants = product_variants[product]
@@ -325,7 +315,54 @@ for product in sorted(product_variants):
     novelties_text = ""
     int_text = ""
     iso_text = ""
+    profile_text = ""
 
+    pprofile = ""
+
+    def body_has(*choices):
+        for choice in choices:
+            if choice in details["body_html"]:
+                return True
+        return False
+
+    # Yes some instances of Cherry profile include a non breaking space...
+    if body_has("Cherry profile",
+                "Profile: Cherry",
+                "cherry profile",
+                "Cherry Profile",
+                "Cherry Keycap Profile",
+                "Keycap Profile: Cherry",
+                "CHRRRY Profile",
+                "Cherry profile",
+                "Cherry-profile",
+                "Cherry-like",
+                "Keycap Profile - Cherry",
+                "Profile : Cherry"):
+        pprofile = "Cherry"
+    elif body_has("MTNU profile"):
+        pprofile = "MTNU"
+    elif "KAM " in ptitle or body_has("KAM Profile", "Profile: Keycreative KAM", "KAM uniform keycap profile", "Keyreative KAM PBT dyesub"):
+        pprofile = "KAM"
+    elif "CXA " in ptitle or body_has("Keycap Profile - CXA", "CXA Profile"):
+        pprofile = "CXA"
+    elif "SA " in ptitle or body_has("SA profile"):
+        pprofile = "SA"
+    elif "DCS " in ptitle or body_has("DCS profile", "DCS Profile", "Keycap Profile: DCS"):
+        pprofile = "DCS"
+    elif body_has("DSS Profile"):
+        pprofile = "DSS"
+    elif "GMK CYL " in ptitle or body_has("Profile: CYL", "GMK CYL profile"):
+        pprofile = "CYL"
+    elif "KAT " in ptitle:
+        pprofile = "KAT"
+    elif "MDA " in ptitle:
+        pprofile = "MDA"
+    elif "MG " in ptitle:
+        pprofile = "MG"
+    else:
+        pprofile = "Unknown"
+
+    
     if variants is True:
         base_kits = [(details["variants"][0]["title"], True)]
 
@@ -335,7 +372,8 @@ for product in sorted(product_variants):
             base_kits = variants
         else:
             # TODO: The "Blank Kit" here is a hack for MDA Future Suzuri
-            base_kits = [variant for variant in variants if variant[1] and "Base" in variant[0] or "Blank Kit" in variant[0]]
+            # TODO: Extra hack here to remove GMK Hazakura Keycaps - Base (Latin) Kit, GMK CYL Shadow - GMK CYL Shadow - Latin Base, DCS White On Black Alps - DCS WoB Alps - Base and DCS Reaper Keyset - DCS Reaper - Alps Base
+            base_kits = [variant for variant in variants if variant[1] and ("Base" in variant[0] or "Blank Kit" in variant[0]) and not "Alps " in variant[0] and not "Latin " in variant[0]]
         if not base_kits:
             qprint("No base kits... skipping!")
             continue
@@ -354,12 +392,27 @@ for product in sorted(product_variants):
         if iso_kits:
             iso_text = "<li>🇬🇧 Some ISO kits in stock</li>" if True in iso_kits else "<li>⚠️ No ISO kits!</li>"
 
+
     for variant in base_kits:
+        if pprofile:
+            profiles[pprofile] = profiles.get(pprofile, 0) + 1
+            profile_text = f"<li>🍒 {pprofile}</li>" if pprofile == "Cherry" else f"<li>⌨️ {pprofile}</li>"
+
+        new_text = ""
+        fav_text = ""
         css_classes = []
         vtitle, vstock = variant
         vdetails = [p for p in details["variants"] if p["title"] == vtitle or p["title"].startswith(vtitle)][0]
         vtitle = vdetails["title"]
-        qprint(f"In stock: {vtitle}")
+        vdate = datetime.fromisoformat(vdetails["created_at"])
+        vage = abs((DATE - vdate).days)
+        qprint(f"In stock: {vtitle}, age: {vage} days")
+
+        if pprofile:
+            css_classes.append(f"_profile_{pprofile.lower()}")
+        else:
+            css_classes.append(f"_profile_none")
+
         try:
             vimage = vdetails["featured_image"]["src"]
         except TypeError:
@@ -369,9 +422,11 @@ for product in sorted(product_variants):
 
         if product in FAVS or f"{product}/{vtitle}" in FAVS:
             css_classes.append("_favourite")
-            fav_text = "<li>💖</li>"
-        else:
-            fav_text = ""
+            fav_text = "<li title=\"One of my favourites!\">💖</li>"
+
+        if vage <= 30:
+            css_classes.append("_new")
+            new_text = "<li title=\"30 days old or less\">⏰ New</li>"
 
         try:
             vwasprice = float(vdetails["compare_at_price"]) * 1.2
@@ -379,11 +434,10 @@ for product in sorted(product_variants):
             vwasprice = 0
 
         if vwasprice and vwasprice != vprice:
-            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} <small>(🥳 was: £{vwasprice:.0f})</small></li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
+            status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} <small>(🥳 was: £{vwasprice:.0f})</small></li>{profile_text}{new_text}{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
             css_classes.append("_sale")
         else:
-            status = f"<ul><li>💰 £{vprice:.0f}</li>{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
-
+            status = f"<ul><li>💰 £{vprice:.0f}</li>{profile_text}{new_text}{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
 
         if vprice < 100:
             css_classes.append("_sub100")
@@ -396,12 +450,19 @@ for product in sorted(product_variants):
 
         css_classes = " ".join(css_classes)
 
+        pvtitle = f"<span> - {vtitle}</span>" if vtitle != "Default Title" else ""
+
         output += f"""<section class="{css_classes}"><h2><a href="{HTML_URL}{product}{TRACKING}">
-    {ptitle}<span> - {vtitle}</span></a></h2>
+    {ptitle}{pvtitle}</a></h2>
 {status}
 <a href="{HTML_URL}{product}{TRACKING}">
     <img src="{vimage}" alt="{ptitle} - {vtitle}" loading="lazy">
 </a></section>
 """
 
-open(OUTPUT_FILE, "w").write(TEMPLATE.replace("<output>", output))
+profiles_html = ""
+
+for profile, count in profiles.items():
+    profiles_html += f"<li class=\"filter\" data-filter=\"_profile_{profile.lower()}\">{profile} <small>({count})</small></li>"
+
+open(OUTPUT_FILE, "w").write(TEMPLATE.replace("<output>", output).replace("<profiles>", profiles_html))
