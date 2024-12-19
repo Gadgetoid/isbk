@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-
 HTML_URL = "https://prototypist.net/products/"
 JSON_URL = "https://prototypist.net/collections/in-stock-keycap-sets/products.json?page="
 TRACKING = "?utm_source=instockbasekits&utm_medium=website&utm_campaign=instockwalletkiller"
@@ -15,9 +14,8 @@ FETCH_DELAY = 0.5
 
 INT_KITS = ("International")
 
-OUTPUT_FILE = "index.html"
-
 CACHE_DIR = pathlib.Path("cache")
+BUILD_DIR = pathlib.Path("build")
 
 FAVS = [l.strip() for l in open("favourites.txt", "r").readlines()]
 
@@ -31,13 +29,13 @@ DATE = datetime.now(tz=ZoneInfo("Europe/London"))
 
 TEMPLATE = """<!DOCTYPE html><html lang="en">
 <head>
-    <title>Wallet Killer - A list of in-stock base kits on protoTypist.net</title>
+    <title>Wallet Killer<subtitle> - A list of in-stock base kits on protoTypist.net</title>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
 </head>
 <body>
     <header>
-        <h1>The Wallet Killer</h1>
+        <h1>The Wallet Killer<subtitle></h1>
         <h2>A list of in-stock base kits at protoTypist</h2>
         <p>This site is not affiliated with protoTypist in any way, accuracy of kits/prices not guaranteed. No commission is earned. It's just a bit o' fun!</p>
         <p>Run by <a href="https://bsky.app/profile/gadgetoid.com">@Gadgetoid</a>. I am sorry for causing you financial ruin. But if you find this useful, please <a href="https://ko-fi.com/gadgetoid">buy me a coffee!</a></p>
@@ -225,6 +223,19 @@ TEMPLATE = """<!DOCTYPE html><html lang="en">
 </body>
 </html>"""
 
+BRAND = None
+DISCOUNT = 0
+OUTPUT_FILE = BUILD_DIR / "index.html"
+if len(sys.argv) >= 2:
+    BRAND = sys.argv[1]
+    OUTPUT_FILE = BUILD_DIR / f"{BRAND.lower()}/index.html"
+
+if len(sys.argv) >= 3:
+    DISCOUNT = int(sys.argv[2])
+    print("Applying discount override")
+
+OUTPUT_FILE.parent.mkdir(exist_ok=True, parents=True)
+
 
 def qprint(*args, **kwargs):
     print(*args, **kwargs)
@@ -311,6 +322,11 @@ for product in sorted(product_variants):
     variants = product_variants[product]
     details = get_product_by_handle(product)
     ptitle = details["title"].replace("(In Stock) ", "")
+
+    if BRAND is not None:
+        if not ptitle.lower().startswith(BRAND.lower() + " "):
+            continue
+
     qprint(f"\nProcessing: {ptitle}")
     novelties_text = ""
     int_text = ""
@@ -428,10 +444,14 @@ for product in sorted(product_variants):
             css_classes.append("_new")
             new_text = "<li title=\"30 days old or less\">⏰ New</li>"
 
-        try:
-            vwasprice = float(vdetails["compare_at_price"]) * 1.2
-        except TypeError:
-            vwasprice = 0
+        if DISCOUNT:
+            vwasprice = vprice
+            vprice -= vprice * (DISCOUNT / 100)
+        else:
+            try:
+                vwasprice = float(vdetails["compare_at_price"]) * 1.2
+            except TypeError:
+                vwasprice = 0
 
         if vwasprice and vwasprice != vprice:
             status = f"<ul><li class=\"sale\">💰 £{vprice:.0f} <small>(🥳 was: £{vwasprice:.0f})</small></li>{profile_text}{new_text}{fav_text}{novelties_text}{int_text}{iso_text}</ul>"
@@ -465,4 +485,10 @@ profiles_html = ""
 for profile, count in profiles.items():
     profiles_html += f"<li class=\"filter\" data-filter=\"_profile_{profile.lower()}\">{profile} <small>({count})</small></li>"
 
-open(OUTPUT_FILE, "w").write(TEMPLATE.replace("<output>", output).replace("<profiles>", profiles_html))
+if BRAND is not None:
+    subtitle = f" ({BRAND} only)"
+else:
+    subtitle = ""
+
+qprint(f"Writing {OUTPUT_FILE}")
+open(OUTPUT_FILE, "w").write(TEMPLATE.replace("<output>", output).replace("<profiles>", profiles_html).replace("<subtitle>", subtitle))
