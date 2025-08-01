@@ -6,3 +6,5 @@ in-stock-miami-nights-keycaps
 in-stock-kat-milkshake
 in-stock-gmk-mtnu-granite-keycap-set
 in-stock-kam-astha-keycaps/KAM Astha - Base Kit
+in-stock-pbs-aperture-priority
+in-stock-pbtfans-retro-dark-lights-r2-keycaps/PBTfans Retro Dark Lights R2 - Base Kit

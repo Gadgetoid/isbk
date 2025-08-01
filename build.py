@@ -343,6 +343,7 @@ for product in sorted(product_variants):
 
     # Yes some instances of Cherry profile include a non breaking space...
     if body_has("Cherry profile",
+                "Profile :  Cherry",
                 "Profile: Cherry",
                 "cherry profile",
                 "Cherry Profile",
@@ -375,6 +376,8 @@ for product in sorted(product_variants):
         pprofile = "MDA"
     elif "MG " in ptitle:
         pprofile = "MG"
+    elif "PBS " in ptitle or body_has("Keycap Profile - PBS"):
+        pprofile = "PBS"
     else:
         pprofile = "Unknown"
 
@@ -412,7 +415,12 @@ for product in sorted(product_variants):
     for variant in base_kits:
         if pprofile:
             profiles[pprofile] = profiles.get(pprofile, 0) + 1
-            profile_text = f"<li>🍒 {pprofile}</li>" if pprofile == "Cherry" else f"<li>⌨️ {pprofile}</li>"
+            if pprofile == "PBS":
+                profile_text = f"<li>🐧 {pprofile}</li>"
+            elif pprofile == "Cherry":
+                profile_text = f"<li>🍒 {pprofile}</li>"
+            else:
+                profile_text = f"<li>⌨️ {pprofile}</li>"
 
         new_text = ""
         fav_text = ""
